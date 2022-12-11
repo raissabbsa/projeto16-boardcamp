@@ -48,7 +48,14 @@ app.post('/categories', async(req,res) => {
 });
 
 app.get("/games", async(req,res) => {
+    const name = req.query.name;
     try{
+        const string = `'%${name}%'`;
+        if(name){
+            const filterGames = await connection.query(`
+            SELECT * FROM games WHERE name ilike ${string}`);
+            res.send(filterGames.rows);
+        }
         const games = await connection.query(`
         SELECT * FROM games`);
         res.send(games.rows);
