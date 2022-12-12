@@ -135,6 +135,33 @@ app.get("/customers/:id", async(req,res) => {
 
 });
 
+app.put("/customers/:id", async(req,res) => {
+    const id = req.params.id;
+    const {name, phone, cpf, birthday} = req.body;
+    const { error } = customerSchema.validate(req.body, { abortEarly: false });
+    if(error){
+        return res.sendStatus(400);
+    }
+    try{
+        const hasCustomer = await connection.query(`SELECT * FROM customers WHERE cpf = $1`, [cpf]);
+        console.log(hasCustomer.rows)
+        if(hasCustomer.rows.length > 0){
+            return res.sendStatus(409);
+        }
+        const customerId = await connection.query(`SELECT * FROM customers WHERE id = $1`, [id]);
+        if(customerId.rows.length === 0){
+            return res.sendStatus(404);
+        }
+        await connection.query(`UPDATE customers SET name = $1, phone = $2, cpf = $3, birthday = $4
+        WHERE id = $5`, [name, phone, cpf, birthday, id]);
+        res.sendStatus(200);
+
+    }catch(err){
+        console.log(err);
+        res.sendStatus(500);
+    }
+});
+
 app.post("/customers", async(req,res) => {
     const {name, phone, cpf, birthday} = req.body;
     const { error } = customerSchema.validate(req.body, { abortEarly: false });
