@@ -11,7 +11,14 @@ const gameSchema = joi.object({
     stockTotal: joi.number().required().min(1),
     categoryId: joi.number().required(),
     pricePerDay: joi.number().required().greater(0)
-})
+});
+
+const customerSchema = joi.object({
+    name: joi.string().required(),
+    phone: joi.string().length(11).pattern(/^[0-9]+$/).required(),
+    cpf: joi.string().length(11).pattern(/^[0-9]+$/).required(),
+    birthday: joi.date().required()
+});
 
 app.get("/categories", async(req,res) => {
     try{
@@ -67,7 +74,7 @@ app.get("/games", async(req,res) => {
 
 app.post("/games", async(req,res) => {
     const {name, image, stockTotal, categoryId, pricePerDay} = req.body;
-    const { error } = gameSchema.validate(req.body, { abortEarly: false })
+    const { error } = gameSchema.validate(req.body, { abortEarly: false });
 
     const hasCategoryId = await connection.query(`SELECT * FROM categories WHERE id = $1`,
     [categoryId]);
@@ -110,7 +117,33 @@ app.get("/customers",async(req,res) => {
         console.log(err);
         res.sendStatus(500);
     } 
-})
+});
+
+app.get("/customers/:id", async(req,res) => {
+
+});
+
+app.post("/customers", async(req,res) => {
+    const {name, phone, cpf, birthday} = req.body;
+    const { error } = customerSchema.validate(req.body, { abortEarly: false });
+    if(error){
+        return res.sendStatus(400);
+    }
+    try{
+        const hasCustomer = await connection.query(`SELECT * FROM customers WHERE cpf = $1`, [cpf]);
+        console.log(hasCustomer.rows)
+        if(hasCustomer.rows.length > 0){
+            return res.sendStatus(409);
+        }
+        await connection.query(`INSERT INTO customers (name, phone, cpf, birthday) 
+        VALUES ($1,$2,$3,$4)`, [name, phone, cpf, birthday]);
+        res.sendStatus(201);
+
+    }catch(err){
+        console.log(err);
+        res.sendStatus(500);
+    } 
+});
 
 
 app.listen(4000, () => {
