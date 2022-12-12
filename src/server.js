@@ -10,7 +10,7 @@ const gameSchema = joi.object({
     image: joi.string().required(),
     stockTotal: joi.number().required().min(1),
     categoryId: joi.number().required(),
-    pricePerDay: joi.number().required().min(1)
+    pricePerDay: joi.number().required().greater(0)
 })
 
 app.get("/categories", async(req,res) => {
@@ -50,11 +50,11 @@ app.post('/categories', async(req,res) => {
 app.get("/games", async(req,res) => {
     const name = req.query.name;
     try{
-        const string = `'%${name}%'`;
+        const stringName = `'${name}%'`;
         if(name){
             const filterGames = await connection.query(`
-            SELECT * FROM games WHERE name ilike ${string}`);
-            res.send(filterGames.rows);
+            SELECT * FROM games WHERE name ilike ${stringName}`);
+            return res.send(filterGames.rows);
         }
         const games = await connection.query(`
         SELECT * FROM games`);
@@ -92,6 +92,26 @@ app.post("/games", async(req,res) => {
         res.sendStatus(500);
     } 
 });
+
+app.get("/customers",async(req,res) => {
+    const cpf = req.query.cpf;
+    const stringcpf = `'${cpf}%'`;
+    try{
+        console.log(cpf)
+        if(cpf){
+            const customersCpf = await connection.query(`
+            SELECT * FROM customers WHERE cpf ilike ${stringcpf}`);
+            return res.send(customersCpf.rows);
+        }
+        const customers = await connection.query(`SELECT * FROM customers`);
+        res.send(customers.rows);
+
+    }catch(err){
+        console.log(err);
+        res.sendStatus(500);
+    } 
+})
+
 
 app.listen(4000, () => {
     console.log('Server is listening on port 4000.');
