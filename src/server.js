@@ -1,6 +1,7 @@
 import express from "express";
 import joi from "joi";
 import connection from "./database/database.js";
+import dayjs from "dayjs";
 
 const app = express();
 app.use(express.json());
@@ -15,7 +16,7 @@ const gameSchema = joi.object({
 
 const customerSchema = joi.object({
     name: joi.string().required(),
-    phone: joi.string().length(11).pattern(/^[0-9]+$/).required(),
+    phone: joi.string().min(10).max(11).pattern(/^[0-9]+$/).required(),
     cpf: joi.string().length(11).pattern(/^[0-9]+$/).required(),
     birthday: joi.date().required()
 });
@@ -170,7 +171,6 @@ app.post("/customers", async(req,res) => {
     }
     try{
         const hasCustomer = await connection.query(`SELECT * FROM customers WHERE cpf = $1`, [cpf]);
-        console.log(hasCustomer.rows)
         if(hasCustomer.rows.length > 0){
             return res.sendStatus(409);
         }
@@ -183,6 +183,60 @@ app.post("/customers", async(req,res) => {
         res.sendStatus(500);
     } 
 });
+
+app.get("/rentals", async(req,res) => {
+    try{
+        const rent = await connection.query(`SELECT * FROM rentals JOIN customers ON "rentals.customerId" = customers.id`)
+
+    }catch(err){
+        console.log(err);
+        res.sendStatus(500);
+    } 
+});
+
+app.post("/rentals", async(req,res) => {
+    const {customerId, gameId, daysRented} = req.body;
+    if(Number(daysRented) <=0){
+        return res.sendStatus(400);
+    }
+    const rentDate = `${dayjs().year()}-${dayjs().month()}-${dayjs().day()}`
+    const returnDate = null;
+    const delayFee = null;
+
+    try{
+        const customerExists = await connection.query(`SELECT * FROM customers WHERE id=$1`,[customerId]);
+        const priceGame = await connection.query(`SELECT "pricePerDay" FROM games WHERE id=$1`, [gameId]);
+        console.log(priceGame.rows,customerExists.rows.length)
+
+        if(customerExists.rows.length === 0 || priceGame.rows.length ===0){
+            return res.sendStatus(400);
+        }
+        const originalPrice = daysRented * Number(priceGame.rows[0].pricePerDay);
+
+        await connection.query(`INSERT INTO rentals 
+        ("customerId", "gameId", "rentDate", "daysRented", "returnDate", "originalPrice", "delayFee") 
+        VALUES ($1,$2,$3, $4, $5, $6, $7)`,
+        [customerId, gameId, rentDate, daysRented, returnDate, originalPrice, delayFee]);
+        res.sendStatus(201);
+
+    }catch(err){
+        console.log(err);
+        res.sendStatus(500);
+    } 
+});
+
+app.delete("/rentals/:id", async(req,res) => {
+    const id = req.params.id;
+    try{
+        const rentExist =  await connection.query(`SELECT * FROM rentals WHERE id = $1`, [id]);
+        console.log(rentExist.rows);
+        if(rentExist.rows.length)
+
+    }catch(err){
+        console.log(err);
+        res.sendStatus(500);
+    }
+})
 
 
 app.listen(4000, () => {
