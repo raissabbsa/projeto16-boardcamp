@@ -1,6 +1,4 @@
 import express from "express";
-import connection from "./database/database.js";
-import dayjs from "dayjs";
 import cors from "cors";
 import gameRouter from "./routes/gameRoutes.js"
 import categoriesRouter from "./routes/categoriesRoutes.js"

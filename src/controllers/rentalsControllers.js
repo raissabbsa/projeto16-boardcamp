@@ -1,4 +1,5 @@
 import connection from "../database/database.js";
+import dayjs from "dayjs";
 
 export async function getRentals(req,res){
     const customerId = req.query.customerId;
@@ -99,7 +100,7 @@ export async function deleteRentals(req,res){
             return res.sendStatus(404);
         }
         if(rentExist.rows[0].returnDate !== null){
-            return res.send(400);
+            return res.sendStatus(400);
         }
         await connection.query(`DELETE FROM rentals WHERE id = $1`, [id]);
         
@@ -127,7 +128,6 @@ export async function postReturnRentals(req,res){
         const dateEnd= new Date(returnDate).getTime();
         const dateInit = new Date(rental.rows[0].rentDate).getTime();
         const timePast = Math.ceil((dateEnd + 3*3600*1000 - dateInit)/(1000*60*60*24));
-        console.log(timePast, rental.rows[0].daysRented)
 
         if(rental.rows[0].daysRented - timePast >= 0){
             delayFee = 0
@@ -135,7 +135,6 @@ export async function postReturnRentals(req,res){
         else{
             delayFee = timePast - rental.rows[0].daysRented ;
         }
-        console.log(dateEnd,dateInit,timePast)
         await connection.query(`
             UPDATE rentals SET "returnDate" = $1, "delayFee" = $2 WHERE id = $3`, 
             [returnDate, delayFee, id]);

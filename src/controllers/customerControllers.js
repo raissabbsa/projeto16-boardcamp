@@ -5,7 +5,6 @@ export async function getCustomers(req,res){
     const cpf = req.query.cpf;
     const stringcpf = `'${cpf}%'`;
     try{
-        console.log(cpf)
         if(cpf){
             const customersCpf = await connection.query(`
             SELECT * FROM customers WHERE cpf ilike ${stringcpf}`);
@@ -45,7 +44,6 @@ export async function putCustomersById(req,res){
     }
     try{
         const hasCustomer = await connection.query(`SELECT * FROM customers WHERE cpf = $1`, [cpf]);
-        console.log(hasCustomer.rows)
         if(hasCustomer.rows.length > 0){
             return res.sendStatus(409);
         }
