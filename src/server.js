@@ -71,7 +71,7 @@ app.get("/games", async(req,res) => {
         console.log(err);
         res.sendStatus(500);
     }
-})
+});
 
 app.post("/games", async(req,res) => {
     const {name, image, stockTotal, categoryId, pricePerDay} = req.body;
@@ -91,7 +91,7 @@ app.post("/games", async(req,res) => {
     try{
         await connection.query(
             `INSERT INTO games (name, image, "stockTotal", "categoryId", "pricePerDay") 
-            VALUES ($1,$2,$3,$4,$5)`,
+            VALUES ($1, $2, $3, $4, $5)`,
             [name, image, stockTotal, categoryId, pricePerDay]
         );
         res.sendStatus(201);
@@ -185,9 +185,54 @@ app.post("/customers", async(req,res) => {
 });
 
 app.get("/rentals", async(req,res) => {
+    const customerId = req.query.customerId;
+    const gameId = req.query.gameId;
+    let newList = [];
+    let list = [];
     try{
-        const rentals = await connection.query(`SELEC`)
+        const rentals = await connection.query(`SELECT * FROM rentals`);
+        for(let i=0; i<rentals.rows.length;i++){
+            const infoCustomer = await connection.query(`
+            SELECT * FROM customers WHERE id = $1`,
+            [rentals.rows[i].customerId]);
+            const infoGame = await connection.query(`
+            SELECT * FROM games WHERE id = $1`,
+            [rentals.rows[i].gameId]);
+            const category = await connection.query(`
+            SELECT * FROM categories WHERE id = $1`,
+            [infoGame.rows[0].categoryId]);
 
+            list.push({
+                ...rentals.rows[i],
+                customer: {
+                    id: infoCustomer.rows[0].id,
+                    name: infoCustomer.rows[0].name
+                },
+                game: {
+                    id: infoGame.rows[0].id,
+                    name: infoGame.rows[0].name,
+                    categoryId: infoGame.rows[0].categoryId,
+                    categoryName: category.rows[0].name
+                }
+            });
+        }
+        if(gameId){
+            for(let i=0; i< list.length;i++){
+                if(list[i].gameId == gameId){
+                    newList.push(list[i])
+                }
+            }
+            return res.send(newList)
+        }
+        if(customerId){
+            for(let i=0; i< list.length;i++){
+                if(list[i].customerId == customerId){
+                    newList.push(list[i])
+                }
+            }
+            return res.send(newList)
+        }
+        res.send(list);
     }catch(err){
         console.log(err);
         res.sendStatus(500);
@@ -208,6 +253,12 @@ app.post("/rentals", async(req,res) => {
         const priceGame = await connection.query(`SELECT "pricePerDay" FROM games WHERE id=$1`, [gameId]);
 
         if(customerExists.rows.length === 0 || priceGame.rows.length ===0){
+            return res.sendStatus(400);
+        }
+
+        const gameIdQuant = await connection.query(`SELECT * FROM rentals WHERE "gameId" = $1`, [gameId]);
+        const gameStock = await connection.query(`SELECT "stockTotal" FROM games WHERE id = $1`, [gameId]);
+        if(gameStock.rows[0].stockTotal<gameIdQuant.rows.length){
             return res.sendStatus(400);
         }
         const originalPrice = daysRented * Number(priceGame.rows[0].pricePerDay)*100;
