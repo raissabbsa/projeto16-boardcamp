@@ -229,14 +229,21 @@ app.delete("/rentals/:id", async(req,res) => {
     const id = req.params.id;
     try{
         const rentExist =  await connection.query(`SELECT * FROM rentals WHERE id = $1`, [id]);
-        console.log(rentExist.rows);
-        if(rentExist.rows.length)
+        if(rentExist.rows.length === 0){
+            return res.sendStatus(404);
+        }
+        if(rentExist.rows[0].returnDate !== null){
+            return res.send(400);
+        }
+        await connection.query(`DELETE FROM rentals WHERE id = $1`, [id]);
+        
+        res.sendStatus(200);
 
     }catch(err){
         console.log(err);
         res.sendStatus(500);
     }
-})
+});
 
 
 app.listen(4000, () => {
